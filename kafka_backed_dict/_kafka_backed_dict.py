@@ -24,7 +24,8 @@ class KafkaBackedDict(object):
                  partition=None,
                  use_rocksdb=True,
                  db_dir=None,
-                 catchup_delay_seconds=30):
+                 catchup_delay_seconds=30,
+                 guid=None):
         self._kafka_bootstrap_servers = kafka_bootstrap_servers
         self._kafka_topic = kafka_topic
         if partition:
@@ -38,7 +39,9 @@ class KafkaBackedDict(object):
             self._db_dir = os.getcwd()
 
         # this guid will be used everywhere
-        self.guid = str(uuid4())
+        self.guid = guid
+        if not guid:
+            self.guid = str(uuid4())
 
         # open kafka
         self._kafka = KafkaClient(self._kafka_bootstrap_servers,
@@ -47,7 +50,7 @@ class KafkaBackedDict(object):
 
         # open db (either ordinary dict or rocksdb)
         if self._use_rocksdb:
-            self._db_path = os.path.join(self._db_dir, self.guid)
+            self._db_path = os.path.join(self._db_dir, "rocksdb-" + self.guid)
             self._db = rocksdb.DB(self._db_path, rocksdb.Options(create_if_missing=True))
         else:
             self._db = {}
@@ -105,7 +108,7 @@ class KafkaBackedDict(object):
             key = str(key).encode()
 
         # produce tombstone to kafka
-        self._kafka.produce(key, b'__key_deleted__')
+        self._kafka.produce(key, b'')
 
         # delete locally
         if self._use_rocksdb:
@@ -132,12 +135,12 @@ class KafkaBackedDict(object):
         for key, val, ts_millis in self._kafka.consume():
             #print("Received %s=%s at ts=%d" % (key, val, ts_millis))
             if self._use_rocksdb:
-                if val != b'__key_deleted__':
+                if val != b'':
                     self._db.put(key, val)
                 else:  # received tombstone
                     self._db.delete(key)
             else:
-                if val != b'__key_deleted__':
+                if val != b'':
                     self._db[key] = val
                 else:
                     del(self._db[key])

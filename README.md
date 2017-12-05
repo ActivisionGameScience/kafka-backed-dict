@@ -1,10 +1,8 @@
-# A python dict-like datastructure that persists in Kafka
+# Dict-like python object that persists to Kafka (optionally caches to RocksDB)
 
-This is a python 3 library that provides a persistent dict-like datastructure
-where key-value pairs are stored in Kafka.
-
-Locally, the dict is stored either in RocksDB (default) or optionally in-memory (if your
-dataset is not too big).
+This python 3 library provides a persistent dict-like data structure.  Key-value
+pairs are persisted in Kafka, and optionally can be cached locally in RocksDB.  For
+smaller datasets it is possible to cache in memory by setting `use_rocksdb=False` (see below).
 
 ## Quickstart for Conda users in Linux
 
@@ -31,17 +29,18 @@ The API is similar to that of a dict:
 ```
     from kafka_backed_dict import KafkaBackedDict
 
-    # `db_dir` is where the RocksDB database will be stored (NOTE: RocksDB doesn't play well with Windows filesystems)
+    # `db_dir` is where the RocksDB database will be stored
+    # (NOTE: RocksDB doesn't play nice with Windows filesystem)
     # if you only want in-mem then pass `use_rocksdb=False` instead
     d = KafkaBackedDict('my.kafkabootstrapserver.com:9092', 'my.kafkatopic.1', db_dir='/tmp') 
 
     # keys are encoded into bytes (so 5 becomes b'5'), and values go through a round trip conversion to/from json
-    # if you don't like the json mangling then you can pass raw bytes, e.g. b'24321'
+    # if you don't like the json mangling then you can store raw bytes, e.g. b'24321', then serialize/deserialize yourself
     d['key1'] = 5
     print(d['key1'])  # prints 5
 
     d['key2'] = {'foo': 'bar', 1: 5}
-    print(d['key2'])  # prints {'foo': 'bar', '1': 5}, and notice that 1 was changed to '1' by the json converter
+    print(d['key2'])  # prints {'foo': 'bar', '1': 5}... notice that 1 was changed to '1' by the json converter
 ```
 
 ## Build
