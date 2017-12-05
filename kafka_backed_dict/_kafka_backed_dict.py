@@ -125,7 +125,7 @@ class KafkaBackedDict(object):
 
             return it
         else:
-            self._db.keys()
+            return self._db.keys()
 
     def _catchup(self):
         if time.time() - self._last_catchup < self._catchup_delay_seconds:
