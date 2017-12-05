@@ -34,13 +34,26 @@ The API is similar to that of a dict:
     # if you only want in-mem then pass `use_rocksdb=False` instead
     d = KafkaBackedDict('my.kafkabootstrapserver.com:9092', 'my.kafkatopic.1', db_dir='/tmp') 
 
-    # keys are encoded into bytes (so 5 becomes b'5'), and values go through a round trip conversion to/from json
-    # if you don't like the json mangling then you can store raw bytes, e.g. b'24321', then serialize/deserialize yourself
-    d['key1'] = 5
-    print(d['key1'])  # prints 5
+    # keys are encoded into byte strings (so 'key1' becomes b'key1', and 5 becomes b'5')
+    # values go through a round-trip json conversion - if you don't like this then you
+    # can always store raw bytes yourself, e.g. b'24321'
+    d['key1'] = 234
+    print(d['key1'])  # prints 234
 
-    d['key2'] = {'foo': 'bar', 1: 5}
-    print(d['key2'])  # prints {'foo': 'bar', '1': 5}... notice that 1 was changed to '1' by the json converter
+    d['key2'] = b'24321'
+    print(d['key2'])  # prints b'24321'
+
+    d['key3'] = {'foo': 'bar', 1: 5}
+    print(d['key3'])  # prints {'foo': 'bar', '1': 5}... notice that 1 was changed to '1' by the json converter
+
+    # you can delete keys easily
+    del(d['key1'])
+    d['key1']  # raises KeyError
+
+    # you can iterate over all keys
+    for k in d.keys():
+        print(k)
+        print(d[k])
 ```
 
 ## Build
