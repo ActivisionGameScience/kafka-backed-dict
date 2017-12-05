@@ -16,7 +16,7 @@ wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh
 # point to our conda channel
 echo "channels:\n  - ActivisionGameScience\n  - defaults" > ~/.condarc
 
-# create and activate an environment that contains pyisp 
+# create and activate an environment
 conda create -n fooenv python=3.6 kafka-backed-dict ipython -y
 source activate fooenv
 
