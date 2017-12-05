@@ -1,0 +1,15 @@
+name: test
+channels:
+- ActivisionGameScience
+- defaults
+- conda-forge
+dependencies:
+- python=3.6.3=0
+- confluent-kafka
+- pip
+- pytest-pep8
+- ujson
+- pip:
+  - env-excavator==1.5.0
+  - raven
+  - datadog

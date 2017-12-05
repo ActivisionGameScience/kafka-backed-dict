@@ -1,0 +1,27 @@
+package:
+  name: kafka-backed-dict
+  version: {{ environ.get('VERSION', '') }}
+
+source:
+  path: ../
+
+requirements:
+  build:
+    - python
+    - setuptools
+    - pip
+    - ujson
+    - confluent-kafka
+
+  run:
+    - python
+    - ujson
+    - confluent-kafka
+
+test:
+  imports:
+    - kafka_backed_dict
+
+about:
+  home: https://github.com/ActivisionGameScience/kafka-backed-dict.git
+  license:  BSD 3-clause
