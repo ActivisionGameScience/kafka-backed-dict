@@ -12,11 +12,13 @@ requirements:
     - pip
     - ujson
     - confluent-kafka
+    - python-rocksdb
 
   run:
     - python
     - ujson
     - confluent-kafka
+    - python-rocksdb
 
 test:
   imports:
