@@ -1,8 +1,14 @@
 # Dict-like python object that persists to Kafka (optionally caches to RocksDB)
 
+**This library is WIP and has not been used in production yet.  Use at
+your own risk.**
+
 This python 3 library provides a persistent dict-like data structure.  Key-value
 pairs are persisted in Kafka, and optionally can be cached locally in RocksDB.  For
 smaller datasets it is possible to cache in memory by setting `use_rocksdb=False` (see below).
+
+Multiple clients can share the same topic, but there are no consistency guarantees - 
+last write wins.
 
 ## Quickstart for Conda users in Linux
 
