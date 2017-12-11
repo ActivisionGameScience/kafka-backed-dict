@@ -24,6 +24,7 @@ class KafkaBackedDict(object):
                  partition=None,
                  use_rocksdb=True,
                  db_dir=None,
+                 rocksdb_mem=4194304,
                  catchup_delay_seconds=30,
                  guid=None):
         self._kafka_bootstrap_servers = kafka_bootstrap_servers
@@ -51,7 +52,10 @@ class KafkaBackedDict(object):
         # open db (either ordinary dict or rocksdb)
         if self._use_rocksdb:
             self._db_path = os.path.join(self._db_dir, "rocksdb-" + self.guid)
-            self._db = rocksdb.DB(self._db_path, rocksdb.Options(create_if_missing=True))
+            rocksdb_options = rocksdb.Options(create_if_missing=True,
+                                              write_buffer_size=rocksdb_mem/2,
+                                              max_write_buffer_number=2)
+            self._db = rocksdb.DB(self._db_path, rocksdb_options)
         else:
             self._db = {}
 
