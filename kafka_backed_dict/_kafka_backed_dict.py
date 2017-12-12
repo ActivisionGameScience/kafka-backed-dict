@@ -16,6 +16,20 @@ logger.setLevel(_settings.LOG_LEVEL)
 logger.addHandler(logging.StreamHandler())
 
 
+class PrefixExtractor(rocksdb.interfaces.SliceTransform):
+    def name(self):
+        return b'prefix_extractor'
+
+    def transform(self, key):
+        raise NotImplementedError("must specify a prefix_extractor function")
+
+    def in_domain(self, key):
+        return True
+
+    def in_range(self, prefix):
+        return True
+
+
 class KafkaBackedDict(object):
 
     def __init__(self, 
@@ -26,11 +40,12 @@ class KafkaBackedDict(object):
                  db_dir=None,
                  rocksdb_mem=4194304,
                  catchup_delay_seconds=30,
-                 guid=None):
+                 guid=None,
+                 prefix_extractor_transform=None):
         self._kafka_bootstrap_servers = kafka_bootstrap_servers
         self._kafka_topic = kafka_topic
         if partition:
-            raise RuntimeError("multiple partitions not supported yet")
+            raise NotImplementedError("multiple partitions not supported yet")
         self._use_rocksdb = use_rocksdb
         self._db_dir = db_dir
         self._catchup_delay_seconds = catchup_delay_seconds
@@ -55,6 +70,12 @@ class KafkaBackedDict(object):
             rocksdb_options = rocksdb.Options(create_if_missing=True,
                                               write_buffer_size=rocksdb_mem/2,
                                               max_write_buffer_number=2)
+            if prefix_extractor_transform:
+                self._prefix_extractor = PrefixExtractor()
+                self._prefix_extractor.transform = prefix_extractor_transform
+                rocksdb_options.prefix_extractor = self._prefix_extractor
+            else:
+                self._prefix_extractor = None
             self._db = rocksdb.DB(self._db_path, rocksdb_options)
         else:
             self._db = {}
@@ -130,6 +151,69 @@ class KafkaBackedDict(object):
             return it
         else:
             return self._db.keys()
+
+    def values(self):
+        self._catchup()
+
+        if self._use_rocksdb:
+            it = self._db.itervalues()
+            it.seek_to_first()
+
+            for val in it:
+                yield self._decode_val(val)
+        else:
+            for val in self._db.values():
+                yield self._decode_val(val)
+
+    def items(self, prefix=None):
+        self._catchup()
+
+        if not prefix:
+            if self._use_rocksdb:
+                it = self._db.iteritems()
+                it.seek_to_first()
+
+                for k, v in it:
+                    yield k, self._decode_val(v)
+            else:
+                for k, v in self._db.values():
+                    yield k, self._decode_val(v)
+        else:
+            if not self._prefix_extractor:
+                raise RuntimeError("prefix search only supported if you pass a prefix_extractor_transform function in the constructor")
+            if not isinstance(prefix, bytes):
+                prefix = str(prefix).encode()
+                         
+            if self._use_rocksdb:
+                it = self._db.iteritems()
+                it.seek(prefix)
+
+                for k, v in it:
+                    start, end = self._prefix_extractor.transform(k)
+                    if prefix == k[start:end]:
+                        yield k, self._decode_val(v)
+                    else:
+                        break
+            else:
+                raise NotImplementedError("prefix search only supported if using rocksdb")
+
+    def first_item(self):
+        if not self._use_rocksdb:
+            raise NotImplementedError("last_item only supported if using rocksdb")
+        it = self._db.iteritems()
+        it.seek_to_first()
+
+        for item in it:
+            return item[0], self._decode_val(item[1])
+
+    def last_item(self):
+        if not self._use_rocksdb:
+            raise NotImplementedError("last_item only supported if using rocksdb")
+        it = self._db.iteritems()
+        it.seek_to_last()
+
+        for item in reversed(it):
+            return item[0], self._decode_val(item[1])
 
     def __iter__(self):
         for k in self.keys():

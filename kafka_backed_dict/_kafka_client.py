@@ -8,7 +8,7 @@ class KafkaClient(object):
         self.kafka_bootstrap_servers = kafka_bootstrap_servers
         self.kafka_topic = kafka_topic
         if partition:
-            raise RuntimeError("multiple partitions not supported yet")
+            raise NotImplementedError("multiple partitions not supported yet")
         self.guid = guid
         if not self.guid:
             self.guid = str(uuid4())
