@@ -66,7 +66,7 @@ class KafkaClient(object):
             if not msg or msg.error():
                 continue  # ignore errors
             partition = msg.partition()
-            if msg.offset() >= partitions[partition]:
+            if partition in partitions and msg.offset() >= partitions[partition]:  # first check is because race conditions might happen
                 del partitions[partition]
             yield msg.key(), msg.value(), msg.timestamp()[1]
 

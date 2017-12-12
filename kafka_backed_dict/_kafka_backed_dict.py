@@ -198,6 +198,8 @@ class KafkaBackedDict(object):
                 raise NotImplementedError("prefix search only supported if using rocksdb")
 
     def first_item(self):
+        self._catchup()
+
         if not self._use_rocksdb:
             raise NotImplementedError("last_item only supported if using rocksdb")
         it = self._db.iteritems()
@@ -207,6 +209,8 @@ class KafkaBackedDict(object):
             return item[0], self._decode_val(item[1])
 
     def last_item(self):
+        self._catchup()
+
         if not self._use_rocksdb:
             raise NotImplementedError("last_item only supported if using rocksdb")
         it = self._db.iteritems()
@@ -216,6 +220,8 @@ class KafkaBackedDict(object):
             return item[0], self._decode_val(item[1])
 
     def __iter__(self):
+        self._catchup()
+
         for k in self.keys():
             yield k
 
