@@ -87,19 +87,23 @@ class KafkaBackedDict(object):
         return self.get(key)[0]  # drop timestamp_ms
 
     def get(self, key):
-        if not isinstance(key, bytes):
-            key = str(key).encode()
+        key = self._encode_key(key)
 
         self._catchup()
 
         if self._use_rocksdb:
             val = self._db.get(key)
-            if not val:
+            if val is None:
                 raise KeyError(key)
             return self._decode_val(val)
         else:
             val = self._db[key]
             return self._decode_val(val)
+
+    def _encode_key(self, key):
+        if not isinstance(key, bytes):
+            key = str(key).encode()
+        return key
 
     def _decode_val(self, val):
         val = ujson.loads(val.decode('utf-8'))
@@ -113,8 +117,7 @@ class KafkaBackedDict(object):
         self.set(key, val)
 
     def set(self, key, val, timestamp_ms=None):
-        if not isinstance(key, bytes):
-            key = str(key).encode()
+        key = self._encode_key(key)
         val = self._encode_val(val, timestamp_ms)
 
         # produce to kafka
@@ -137,8 +140,7 @@ class KafkaBackedDict(object):
         return val
 
     def __delitem__(self, key):
-        if not isinstance(key, bytes):
-            key = str(key).encode()
+        key = self._encode_key(key)
 
         # produce tombstone to kafka
         self._kafka.produce(key, b'__delete_key__')
@@ -228,10 +230,20 @@ class KafkaBackedDict(object):
             return item[0], self._decode_val(item[1])[0]
 
     def __iter__(self):
+        return self.keys()
+
+    def __contains__(self, key):
+        key = self._encode_key(key)
+
         self._catchup()
 
-        for k in self.keys():
-            yield k
+        if self._use_rocksdb:
+            if self._db.get(key) is not None:
+                return True
+            else:
+                return False
+        else:
+            return key in self._db
 
     def _catchup(self):
         if time.time() - self._last_catchup < self._catchup_delay_seconds:
