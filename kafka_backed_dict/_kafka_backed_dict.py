@@ -80,10 +80,13 @@ class KafkaBackedDict(object):
         else:
             self._db = {}
 
-        # we will read from kafka every few seconds
+        # we will read from kafka periodically, but haven't read yet
         self._last_catchup = 0
 
     def __getitem__(self, key):
+        return self.get(key)[0]  # drop timestamp_ms
+
+    def get(self, key):
         if not isinstance(key, bytes):
             key = str(key).encode()
 
@@ -102,14 +105,17 @@ class KafkaBackedDict(object):
         val = ujson.loads(val.decode('utf-8'))
         # has format [timestamp_ms=int, base64_encoded=0 or 1, data]
         if val[1] == 1:
-            return b64decode(val[2])
+            return b64decode(val[2]), val[0]
         else:
-            return val[2]
+            return val[2], val[0]
 
     def __setitem__(self, key, val):
+        self.set(key, val)
+
+    def set(self, key, val, timestamp_ms=None):
         if not isinstance(key, bytes):
             key = str(key).encode()
-        val = self._encode_val(val)
+        val = self._encode_val(val, timestamp_ms)
 
         # produce to kafka
         self._kafka.produce(key, val)
@@ -120,11 +126,13 @@ class KafkaBackedDict(object):
         else:
             self._db[key] = val
 
-    def _encode_val(self, val):
+    def _encode_val(self, val, timestamp_ms):
+        if not timestamp_ms:
+            timestamp_ms = int(time.time()*1000)
         if isinstance(val, bytes):
-            val = [int(time.time()*1000), 1, b64encode(val)]
+            val = [timestamp_ms, 1, b64encode(val)]
         else:
-            val = [int(time.time()*1000), 0, val]
+            val = [timestamp_ms, 0, val]
         val = ujson.dumps(val, ensure_ascii=False).encode('utf-8')
         return val
 
@@ -160,10 +168,10 @@ class KafkaBackedDict(object):
             it.seek_to_first()
 
             for val in it:
-                yield self._decode_val(val)
+                yield self._decode_val(val)[0]
         else:
             for val in self._db.values():
-                yield self._decode_val(val)
+                yield self._decode_val(val)[0]
 
     def items(self, prefix=None):
         self._catchup()
@@ -174,10 +182,10 @@ class KafkaBackedDict(object):
                 it.seek_to_first()
 
                 for k, v in it:
-                    yield k, self._decode_val(v)
+                    yield k, self._decode_val(v)[0]
             else:
                 for k, v in self._db.values():
-                    yield k, self._decode_val(v)
+                    yield k, self._decode_val(v)[0]
         else:
             if not self._prefix_extractor:
                 raise RuntimeError("prefix search only supported if you pass a prefix_extractor_transform function in the constructor")
@@ -191,7 +199,7 @@ class KafkaBackedDict(object):
                 for k, v in it:
                     start, end = self._prefix_extractor.transform(k)
                     if prefix == k[start:end]:
-                        yield k, self._decode_val(v)
+                        yield k, self._decode_val(v)[0]
                     else:
                         break
             else:
@@ -206,7 +214,7 @@ class KafkaBackedDict(object):
         it.seek_to_first()
 
         for item in it:
-            return item[0], self._decode_val(item[1])
+            return item[0], self._decode_val(item[1])[0]
 
     def last_item(self):
         self._catchup()
@@ -217,7 +225,7 @@ class KafkaBackedDict(object):
         it.seek_to_last()
 
         for item in reversed(it):
-            return item[0], self._decode_val(item[1])
+            return item[0], self._decode_val(item[1])[0]
 
     def __iter__(self):
         self._catchup()
