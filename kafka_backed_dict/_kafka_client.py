@@ -54,11 +54,12 @@ class KafkaClient(object):
             last_offset = self.c.get_watermark_offsets(prt)[1] - 1
             if last_offset < 0:  # if nothing in partition then this will be -1
                 continue
-            position = max(self.c.position([prt])[0].offset - 1, 0)  # if never read before then position=-1001 for some stupid reason
+            position = max(self.c.position([prt])[0].offset - 1, -1)  # if never read before then call returns -1001 for some reason
             if last_offset > position:
                 partitions[partition] = last_offset
 
-        while len(partitions) > 0:
+        # process partitions up to watermarks (but remember that we already consumed a message, so need to yield that)
+        while first_message or len(partitions) > 0:
             if not first_message:
                 msg = self.c.poll(timeout=10.0)
             else:
