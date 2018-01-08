@@ -5,13 +5,18 @@ from time import time
 from kafka_backed_dict import KafkaBackedDict
 
 
+# These are not real tests yet.  If you just want to convince
+# yourself that it works then edit the line below and run it manually
 kafka_brokers = 'put_your_kafka_brokers_here:9092'
+kafka_topic = 'test.spencerrules.1'
+rocksdb_dir = '/home/vagrant'
 
 # open up key-value store and clear it out
 a = KafkaBackedDict(kafka_brokers,
-                    'test.spencerrules.1',
-                    db_dir='/home/vagrant')
-#                    prefix_extractor_transform=lambda key: (0,1))  # test the cool prefix feature later... for now just ignore this
+                    kafka_topic,
+                    db_dir=rocksdb_dir)
+# need to write a test for the prefix feature later - it's really useful.  For now just ignore this
+#                    prefix_extractor_transform=lambda key: (0,1))
 for k in a.keys():
     del(a[k])
 
@@ -79,7 +84,9 @@ for k in keys_b:
 # start a new database instance and revalidate
 print("revalidating")
 del a
-a = KafkaBackedDict('internal-PRD1KAFKA-1272792231.us-west-2.elb.amazonaws.com:9092', 'test.spencerrules.1', db_dir='/home/vagrant')
+a = KafkaBackedDict(kafka_brokers,
+                    kafka_topic,
+                    db_dir=rocksdb_dir)
 keys_a = sorted(list(a.keys()))
 keys_b = sorted(list(b.keys()))
 assert keys_a == keys_b
