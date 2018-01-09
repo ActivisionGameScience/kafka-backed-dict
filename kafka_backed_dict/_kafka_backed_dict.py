@@ -139,11 +139,12 @@ class KafkaBackedDict(object):
         val = ujson.dumps(val, ensure_ascii=False).encode('utf-8')
         return val
 
-    def __delitem__(self, key):
+    def __delitem__(self, key, commit=True):
         key = self._encode_key(key)
 
-        # produce tombstone to kafka
-        self._kafka.produce(key, b'__delete_key__')
+        if commit:
+            # produce tombstone to kafka
+            self._kafka.produce(key, b'__delete_key__')
 
         # delete locally
         if self._use_rocksdb:
