@@ -38,7 +38,7 @@ The API is similar to that of a dict:
     # `db_dir` is where the RocksDB database will be stored
     # (NOTE: RocksDB doesn't play nice with Windows filesystem)
     # if you only want in-mem then pass `use_rocksdb=False` instead
-    d = KafkaBackedDict('my.kafkabootstrapserver.com:9092', 'my.kafkatopic.1', db_dir='/tmp') 
+    d = KafkaBackedDict('my.kafkabootstrapserver.com:9092', 'my.kafkatopic.1', db_dir='/tmp', read_only=False)
 
     # keys are encoded into byte strings (so 'key1' becomes b'key1', and 5 becomes b'5')
     # values go through a round-trip json conversion - if you don't like this then you

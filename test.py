@@ -14,7 +14,8 @@ rocksdb_dir = '/home/vagrant'
 # open up key-value store and clear it out
 a = KafkaBackedDict(kafka_brokers,
                     kafka_topic,
-                    db_dir=rocksdb_dir)
+                    db_dir=rocksdb_dir,
+                    read_only=False)
 # need to write a test for the prefix feature later - it's really useful.  For now just ignore this
 #                    prefix_extractor_transform=lambda key: (0,1))
 for k in a.keys():
@@ -86,7 +87,8 @@ print("revalidating")
 del a
 a = KafkaBackedDict(kafka_brokers,
                     kafka_topic,
-                    db_dir=rocksdb_dir)
+                    db_dir=rocksdb_dir,
+                    read_only=False)
 keys_a = sorted(list(a.keys()))
 keys_b = sorted(list(b.keys()))
 assert keys_a == keys_b

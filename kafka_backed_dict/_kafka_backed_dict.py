@@ -41,7 +41,9 @@ class KafkaBackedDict(object):
                  rocksdb_mem=4194304,
                  catchup_delay_seconds=30,
                  guid=None,
-                 prefix_extractor_transform=None):
+                 prefix_extractor_transform=None,
+                 read_only=True,
+                 unique_producer=False):
         self._kafka_bootstrap_servers = kafka_bootstrap_servers
         self._kafka_topic = kafka_topic
         if partition:
@@ -49,6 +51,8 @@ class KafkaBackedDict(object):
         self._use_rocksdb = use_rocksdb
         self._db_dir = db_dir
         self._catchup_delay_seconds = catchup_delay_seconds
+        self._read_only = read_only
+        self._unique_producer = unique_producer
 
         # if not specified then use cwd
         if not self._db_dir:
@@ -117,6 +121,9 @@ class KafkaBackedDict(object):
         self.set(key, val)
 
     def set(self, key, val, timestamp_ms=None):
+        if self._read_only:
+            raise RuntimeError("Trying to write when opened read-only")
+
         key = self._encode_key(key)
         val = self._encode_val(val, timestamp_ms)
 
@@ -247,6 +254,10 @@ class KafkaBackedDict(object):
             return key in self._db
 
     def _catchup(self):
+        # is unique producer? if so only need to catchup once
+        if self._unique_producer and self._last_catchup != 0:
+            return
+        # is it time to catchup?
         if time.time() - self._last_catchup < self._catchup_delay_seconds:
             return
         self._last_catchup = time.time()
