@@ -146,12 +146,25 @@ class KafkaBackedDict(object):
         val = ujson.dumps(val, ensure_ascii=False).encode('utf-8')
         return val
 
-    def __delitem__(self, key, commit=True):
+    def __delitem__(self, key):
+        if self._read_only:
+            raise RuntimeError("Trying to delete key when opened read-only")
+
         key = self._encode_key(key)
 
-        if commit:
-            # produce tombstone to kafka
-            self._kafka.produce(key, b'__delete_key__')
+        # produce tombstone to kafka
+        self._kafka.produce(key, b'__delete_key__')
+
+        # delete locally
+        if self._use_rocksdb:
+            self._db.delete(key)
+        else:
+            del(self._db[key])
+
+    def free(self, key):
+        """Similar to __delitem__, but only deletes from local db.  Does not delete from kafka
+        """
+        key = self._encode_key(key)
 
         # delete locally
         if self._use_rocksdb:
