@@ -172,6 +172,10 @@ class KafkaBackedDict(object):
         else:
             del(self._db[key])
 
+    def compact(self):
+        if self._use_rocksdb:
+            self._db.compact_range()
+
     def keys(self):
         self._catchup()
 
@@ -204,11 +208,11 @@ class KafkaBackedDict(object):
                 it = self._db.iteritems()
                 it.seek_to_first()
 
-                for k, v in it:
-                    yield k, self._decode_val(v)[0]
+                for key, val in it:
+                    yield key, self._decode_val(val)[0]
             else:
-                for k, v in self._db.values():
-                    yield k, self._decode_val(v)[0]
+                for key, val in self._db.values():
+                    yield key, self._decode_val(val)[0]
         else:
             if not self._prefix_extractor:
                 raise RuntimeError("prefix search only supported if you pass a prefix_extractor_transform function in the constructor")
@@ -219,10 +223,10 @@ class KafkaBackedDict(object):
                 it = self._db.iteritems()
                 it.seek(prefix)
 
-                for k, v in it:
-                    start, end = self._prefix_extractor.transform(k)
-                    if prefix == k[start:end]:
-                        yield k, self._decode_val(v)[0]
+                for key, val in it:
+                    start, end = self._prefix_extractor.transform(key)
+                    if prefix == key[start:end]:
+                        yield key, self._decode_val(val)[0]
                     else:
                         break
             else:
@@ -232,12 +236,12 @@ class KafkaBackedDict(object):
         self._catchup()
 
         if not self._use_rocksdb:
-            raise NotImplementedError("last_item only supported if using rocksdb")
+            raise NotImplementedError("first_item only supported if using rocksdb")
         it = self._db.iteritems()
         it.seek_to_first()
 
-        for item in it:
-            return item[0], self._decode_val(item[1])[0]
+        for key, val in it:
+            return key, self._decode_val(val)[0]
 
     def last_item(self):
         self._catchup()
@@ -247,8 +251,8 @@ class KafkaBackedDict(object):
         it = self._db.iteritems()
         it.seek_to_last()
 
-        for item in reversed(it):
-            return item[0], self._decode_val(item[1])[0]
+        for key, val in reversed(it):
+            return key, self._decode_val(val)[0]
 
     def __iter__(self):
         return self.keys()
