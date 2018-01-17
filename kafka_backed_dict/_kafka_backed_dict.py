@@ -86,6 +86,7 @@ class KafkaBackedDict(object):
 
         # we will read from kafka periodically, but haven't read yet
         self._last_catchup = 0
+        self.is_busy = False
 
     def __getitem__(self, key):
         return self.get(key)[0]  # drop timestamp_ms
@@ -278,6 +279,7 @@ class KafkaBackedDict(object):
         if time.time() - self._last_catchup < self._catchup_delay_seconds:
             return
         self._last_catchup = time.time()
+        self.is_busy = True
         self._kafka.flush_producer()
         for key, val, ts_millis in self._kafka.consume():
             #print("Received %s=%s at ts=%d" % (key, val, ts_millis))
@@ -291,3 +293,4 @@ class KafkaBackedDict(object):
                     self._db[key] = val
                 else:
                     del(self._db[key])
+        self.is_busy = False
