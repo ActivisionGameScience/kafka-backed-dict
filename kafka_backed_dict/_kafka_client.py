@@ -64,10 +64,11 @@ class KafkaClient(object):
                 msg = self.c.poll(timeout=10.0)
             else:
                 first_message = False
-            if not msg or msg.error():
+            if msg == None or msg.error():  # NOTE:  "if not msg" checks if message len = 0, which is different from checking "if msg == None"
                 continue  # ignore errors
             partition = msg.partition()
-            if partition in partitions and msg.offset() >= partitions[partition]:  # first check is because race conditions might happen
+            if partition in partitions and msg.offset() >= partitions[partition]:  # first check is because we might read past the watermark 
+                                                                                   # for a partition that we're already done with... but that's ok
                 del partitions[partition]
             yield msg.key(), msg.value(), msg.timestamp()[1]
 
