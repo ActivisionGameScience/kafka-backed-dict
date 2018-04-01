@@ -20,8 +20,10 @@ class KafkaClient(object):
         try:
             if not self.p:
                 self.p = Producer({'bootstrap.servers': self.kafka_bootstrap_servers, 'api.version.request': True})
-            if not isinstance(key, bytes) or not isinstance(val, bytes):
-                raise TypeError('producing to kafka requires key/val to both be raw bytes')
+            if not isinstance(key, bytes):
+                raise TypeError('producing to kafka requires key to be raw bytes')
+            if not isinstance(val, bytes) and val is not None:
+                raise TypeError('producing to kafka requires val to be raw bytes or None')
             self.p.produce(topic=self.kafka_topic, value=val, key=key)
         except BufferError:
             self.p.flush()

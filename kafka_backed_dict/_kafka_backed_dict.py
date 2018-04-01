@@ -154,7 +154,7 @@ class KafkaBackedDict(object):
         key = self._encode_key(key)
 
         # produce tombstone to kafka
-        self._kafka.produce(key, b'')
+        self._kafka.produce(key, None)
 
         # delete locally
         if self._use_rocksdb:
@@ -284,12 +284,12 @@ class KafkaBackedDict(object):
         for key, val, ts_millis in self._kafka.consume():
             #print("Received %s=%s at ts=%d" % (key, val, ts_millis))
             if self._use_rocksdb:
-                if val != b'' and val != b'__delete_key__':  # __delete_key__ is for backwards compatibility
+                if val is not None and val != b'__delete_key__':  # __delete_key__ is for backwards compatibility
                     self._db.put(key, val)
                 else:  # received tombstone
                     self._db.delete(key)
             else:
-                if val != b'' and val != b'__delete_key__':  # __delete_key__ is for backwards compatibility
+                if val is not None and val != b'__delete_key__':  # __delete_key__ is for backwards compatibility
                     self._db[key] = val
                 else:
                     del(self._db[key])
