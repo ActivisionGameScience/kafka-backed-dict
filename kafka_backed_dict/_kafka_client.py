@@ -66,7 +66,7 @@ class KafkaClient(object):
                 msg = self.c.poll(timeout=10.0)
             else:
                 first_message = False
-            if msg == None or msg.error():  # NOTE:  "if not msg" checks if message len = 0, which is different from checking "if msg == None"
+            if msg is None or msg.error():  # NOTE:  "if not msg" checks if message len = 0, which is different from checking "if msg is None"
                 continue  # ignore errors
             partition = msg.partition()
             if partition in partitions and msg.offset() >= partitions[partition]:  # first check is because we might read past the watermark 
