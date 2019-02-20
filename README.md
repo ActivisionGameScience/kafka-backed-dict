@@ -1,7 +1,7 @@
 # Dict-like python object that persists to Kafka (optionally caches to RocksDB)
 
-**This library is WIP and has not been used in production yet.  Use at
-your own risk.**
+**This was POC only.  There is a much better project
+called [Faust](https://github.com/robinhood/faust) (that is, if you can work with Python's `async`).**
 
 This python 3 library provides a persistent dict-like data structure.  Key-value
 pairs are persisted in Kafka, and optionally can be cached locally in RocksDB.  For
